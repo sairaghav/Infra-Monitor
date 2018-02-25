@@ -1,6 +1,6 @@
-<InfraMonitor output_host="192.168.142.129" output_port="5701">
-	<Environment environment_name="ES Host">
-		<Host host_name="EGOServer" tier="ELK Tier">
+<InfraMonitor output_type="elasticsearch" output_host="EgoServer" output_port="9200" index_name="monitor">
+	<Environment environment_name="ES Server">
+		<Host host_name="EgoServer" tier="ELK Tier">
 			<Process port="9200">Elasticsearch</Process>
 			<Process port="5601">Kibana</Process>
 		</Host>

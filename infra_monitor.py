@@ -2,18 +2,41 @@ import sys, ctypes
 import xml.etree.ElementTree as ET
 import socket
 import json
+import time
+from elasticsearch import Elasticsearch
+from datetime import datetime
+import uuid
+
+def send_to_es(host,port,index,data):
+    try:
+        es = Elasticsearch([{'host':host,'port':int(port)}])
+    except:
+        print 'Elasticsearch not running'
+        sys.exit()
+
+    es.index(index=index,doc_type='monitor',id=uuid.uuid4(),body=data)
 
 def send_to_logstash(host,port,data):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((host, port))
+    try:
+        sock.connect((host,int(port))
+    except:
+        print 'Logstash pipeline not running'
+        sys.exit()
+
     sock.send(json.dumps(data)+'\n')
     sock.close()
     
 def monitor(input_xml):
     root = input_xml.getroot()
 
+    output_type = root.get('output_type')
     output_host = root.get('output_host')
-    output_port = int(root.get('output_port'))
+    output_port = root.get('output_port')
+
+    if output_type == 'elasticsearch':
+        index = root.get('index_name')
+        index_name = index+'-'+time.strftime('%Y-%m-%d')
 
     while(1):
         for environment in root:
@@ -59,14 +82,22 @@ def monitor(input_xml):
                         process_state = 0
                         process_status = "Stopped"
 
-                    data = {'environment':environment_name,'host':host,'tier':tier,'host_state':host_state,'host_status':host_status,'process_name':process,'process_state':process_state,'process_status':process_status}
-                    send_to_logstash(output_host,output_port,data)
-                    #print data
+                    data = {'@timestamp':datetime.now().isoformat(),'environment':environment_name,'host':host,'tier':tier,'host_state':host_state,'host_status':host_status,'process_name':process,'process_state':process_state,'process_status':process_status}
+
+                    if output_type == 'elasticsearch':
+                        send_to_es(output_host,output_port,index_name,data)
+                    if output_type == 'logstash':
+                        send_to_logstash(output_host,output_port,data)
+                    print data
 
                 if no_of_processes == 0:
-                    data = {'environment':environment_name,'host':host,'tier':tier,'host_state':host_state,'host_status':host_status}
-                    send_to_logstash(output_host,output_port,data)
-                    #print data
+                    data = {'@timestamp':datetime.now().isoformat(),'environment':environment_name,'host':host,'tier':tier,'host_state':host_state,'host_status':host_status}
+
+                    if output_type == 'elasticsearch':
+                        send_to_es(output_host,output_port,index_name,data)
+                    if output_type == 'logstash':
+                        send_to_logstash(output_host,output_port,data)
+                    print data
             
 if ctypes.windll.shell32.IsUserAnAdmin() == 0:
     print '\nPlease run the program as Administrator'
@@ -77,4 +108,4 @@ else:
     except:
         print 'Please provide the input XML file'
 
-sys.exit(0)
+sys.exit()
