@@ -1,6 +1,6 @@
 <InfraMonitor output_type="elasticsearch" output_host="EgoServer" output_port="9200" index_name="monitor">
-	<Environment environment_name="ES Server">
-		<Host host_name="EgoServer" tier="ELK Tier">
+	<Environment environment_name="ES Instance">
+		<Host host_name="EgoServer" tier="App/Web/DB Tier">
 			<Process port="9200">Elasticsearch</Process>
 			<Process port="5601">Kibana</Process>
 		</Host>
