@@ -6,6 +6,13 @@ import time
 from elasticsearch import Elasticsearch
 from datetime import datetime
 import base64
+import pytz
+import urllib3
+import warnings
+
+warnings.filterwarnings('ignore')
+urllib3.disable_warnings()
+tz = pytz.timezone('Asia/Kolkata')
 
 def send_to_es(host,port,index,data,es_user=None,es_pass=None,use_https=None,cert_verify=None):
     global cnt
@@ -21,16 +28,10 @@ def send_to_es(host,port,index,data,es_user=None,es_pass=None,use_https=None,cer
     else:
         cert_verify = False
 
-    if use_https:
-        if es_user is None and es_pass is None:
-            es_host = 'https://'+host+':'+port
-        else:
-            es_host = 'https://'+es_user+':'+es_pass+'@'+host+':'+port
+    if es_user is None and es_pass is None:
+        es_host = host+':'+port
     else:
-        if es_user is None and es_pass is None:
-            es_host = 'http://'+host+':'+port
-        else:
-            es_host = 'http://'+es_user+':'+es_pass+'@'+host+':'+port
+        es_host = es_user+':'+es_pass+'@'+host+':'+port
 
     id_val = base64.b64encode(str(time.time())+str(cnt))
     
@@ -45,12 +46,11 @@ def send_to_logstash(host,port,data):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         sock.connect((host,int(port)))
+        sock.send(json.dumps(data)+'\n')
+        sock.close()
     except:
         print 'Logstash pipeline not running or there is some error in the information provided'
         sys.exit()
-
-    sock.send(json.dumps(data)+'\n')
-    sock.close()
     
 def monitor(input_xml):
     global cnt
@@ -114,18 +114,18 @@ def monitor(input_xml):
                         process_state = 0
                         process_status = "Stopped"
 
-                    data = {'@timestamp':datetime.now().isoformat(),'environment':environment_name,'host':host,'tier':tier,'host_state':host_state,'host_status':host_status,'process_name':process,'process_state':process_state,'process_status':process_status}
+                    data = {'@timestamp':tz.localize(datetime.now()).isoformat(),'environment':environment_name,'host':host,'tier':tier,'host_state':host_state,'host_status':host_status,'process_name':process,'process_state':process_state,'process_status':process_status}
 
                     if output_type == 'elasticsearch':
-                        send_to_es(output_host,output_port,index_name,data)
+                        send_to_es(host,port,index,data,es_user,es_pass,use_https,cert_verify)
                     if output_type == 'logstash':
                         send_to_logstash(output_host,output_port,data)
 
                 if no_of_processes == 0:
-                    data = {'@timestamp':datetime.now().isoformat(),'environment':environment_name,'host':host,'tier':tier,'host_state':host_state,'host_status':host_status}
+                    data = {'@timestamp':tz.localize(datetime.now()).isoformat(),'environment':environment_name,'host':host,'tier':tier,'host_state':host_state,'host_status':host_status}
 
                     if output_type == 'elasticsearch':
-                        send_to_es(es,index_name,data)
+                        send_to_es(host,port,index,data,es_user,es_pass,use_https,cert_verify)
                     if output_type == 'logstash':
                         send_to_logstash(output_host,output_port,data)
             
@@ -144,7 +144,7 @@ if __name__ == '__main__':
             input_xml = ET.parse(sys.argv[1])
             monitor(input_xml)
         except:
-            print 'No input XML file given or there is some error in the information provided'
+            print 'Incorrect or no input XML file'
     else:
         print 'Run the program with admin/root privileges'
 
