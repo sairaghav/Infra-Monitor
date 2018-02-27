@@ -117,7 +117,7 @@ def monitor(input_xml):
                     data = {'@timestamp':tz.localize(datetime.now()).isoformat(),'environment':environment_name,'host':host,'tier':tier,'host_state':host_state,'host_status':host_status,'process_name':process,'process_state':process_state,'process_status':process_status}
 
                     if output_type == 'elasticsearch':
-                        send_to_es(host,port,index,data,es_user,es_pass,use_https,cert_verify)
+                        send_to_es(output_host,output_port,index_name,data,es_user,es_pass,use_https,cert_verify)
                     if output_type == 'logstash':
                         send_to_logstash(output_host,output_port,data)
 
@@ -125,7 +125,7 @@ def monitor(input_xml):
                     data = {'@timestamp':tz.localize(datetime.now()).isoformat(),'environment':environment_name,'host':host,'tier':tier,'host_state':host_state,'host_status':host_status}
 
                     if output_type == 'elasticsearch':
-                        send_to_es(host,port,index,data,es_user,es_pass,use_https,cert_verify)
+                        send_to_es(output_host,output_port,index_name,data,es_user,es_pass,use_https,cert_verify)
                     if output_type == 'logstash':
                         send_to_logstash(output_host,output_port,data)
             
